@@ -3,7 +3,7 @@ export const analyzeResume = async (resumeFile, jobDescription) => {
   formData.append("resume", resumeFile);
   formData.append("jobDescription", jobDescription);
 
-  const response = await fetch(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/resume/analyze`, {
+  const response = await fetch(`${process.env.REACT_APP_API_URL, {
     method: "POST",
     body: formData
   });
