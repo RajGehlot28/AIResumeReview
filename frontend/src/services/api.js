@@ -3,12 +3,13 @@ export const analyzeResume = async (resumeFile, jobDescription) => {
   formData.append("resume", resumeFile);
   formData.append("jobDescription", jobDescription);
 
-  const response = await fetch(`${"https://ai-resume-backend-4jpi.onrender.com/", {
+  const BASE_URL = "https://ai-resume-backend-4jpi.onrender.com"; // Backend link
+  const response = await fetch(`${BASE_URL}/api/resume/analyze`, {
     method: "POST",
     body: formData
   });
 
-  if(!response.ok) {
+  if (!response.ok) {
     const err = await response.json();
     throw new Error(err.message || "Failed to analyze resume");
   }
