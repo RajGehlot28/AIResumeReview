@@ -3,7 +3,7 @@ export const analyzeResume = async (resumeFile, jobDescription) => {
   formData.append("resume", resumeFile);
   formData.append("jobDescription", jobDescription);
 
-  const response = await fetch(`${process.env.REACT_APP_API_URL, {
+  const response = await fetch(`${"https://ai-resume-backend-4jpi.onrender.com/", {
     method: "POST",
     body: formData
   });
