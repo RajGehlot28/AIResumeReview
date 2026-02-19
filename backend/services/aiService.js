@@ -1,5 +1,7 @@
 import OpenAI from "openai";
-import pdf from "@cedrugs/pdf-parse";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdf = require("@cedrugs/pdf-parse");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -8,62 +10,49 @@ const openai = new OpenAI({
 export const analyzeWithAI = async (fileBuffer, jobDescription) => {
   let resumeText = "";
 
-  // Extracting Text using the modern fork
   try {
     const pdfData = await pdf(fileBuffer);
     resumeText = pdfData.text ? pdfData.text.trim() : "";
-  } catch(error) {
+  } catch (error) {
     console.error("PDF extraction failed:", error);
-    throw new Error("Failed to read the PDF file.");
+    throw new Error("Could not extract text from the PDF. Ensure it's not password protected.");
   }
 
-  if(!resumeText || resumeText.length < 50) {
-    throw new Error("Resume content is too short or unreadable.");
+  if (!resumeText || resumeText.length < 50) {
+    throw new Error("The resume appears to be empty or an image-based PDF (OCR not supported).");
   }
 
-  // Prompting to AI
   const analysisPrompt = `
-You are a high-precision ATS evaluation engine.
-Compare the Resume Text against the Job Description.
+    You are a professional ATS expert. Compare this Resume against the Job Description.
+    
+    JD: ${jobDescription}
+    Resume: ${resumeText}
 
-SCORING RULES:
-- Score 0-100 based on keyword matching and experience relevance.
-- Identify strengths and clear gaps.
-- Suggest 3-5 specific keywords to add.
+    Output valid JSON with: score (number), matched_skills (array), missing_skills (array), 
+    recommended_keywords (array), strengths (array), weaknesses (array), suggestions (array).
+  `;
 
-JD:
-${jobDescription}
-
-Resume Text:
-${resumeText}
-
-Return ONLY a valid JSON object:
-{
-  "score": number,
-  "matched_skills": [],
-  "missing_skills": [],
-  "recommended_keywords": [],
-  "strengths": [],
-  "weaknesses": [],
-  "suggestions": []
-}
-`;
-
-  // AI Request
-  const response = await openai.chat.completions.create({
+  try {
+    const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
-      { role: "system", content: "You are a professional ATS system. Output JSON only." },
+      { role: "system", content: "You are an ATS system. Respond only in JSON format." },
       { role: "user", content: analysisPrompt }
     ],
     response_format: { type: "json_object" },
     temperature: 0.1
+  }, {
+    timeout: 30000
   });
 
-  // Parsing and returning
-  try {
-    return JSON.parse(response.choices[0].message.content);
-  } catch(err) {
-    throw new Error("AI output was not valid JSON.");
+    const result = response.choices[0].message.content;
+    return JSON.parse(result);
+
+  } catch (err) {
+    console.error("OpenAI or Parsing Error:", err.message);
+    if (err.message.includes("apiKey")) {
+      throw new Error("Backend Error: OpenAI API Key is missing or invalid.");
+    }
+    throw new Error("The AI failed to analyze the resume. Please try again in a moment.");
   }
 };
